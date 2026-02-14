@@ -39,7 +39,7 @@ The system comes pre-seeded with the following accounts for testing all workflow
 ### 🎓 Student Panel
 *   **Email**: `student@university.edu`
 *   **Password**: `student123`
-*   *Access*: Apply for clearance, view status, download certificate.
+*   *Access*: Apply for clearance, view status, download certificate
 
 ### 🏛 Department Panels (Approvers)
 | Department | Email | Password |
