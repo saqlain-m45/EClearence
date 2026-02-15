@@ -3,7 +3,7 @@
  * Vanilla JS + Bootstrap 5 + MediQu Theme
  */
 
-const API_URL = 'http://localhost/EClearence/backend/api';
+const API_URL = '../backend/api';
 const app = document.getElementById('app');
 
 const state = {
@@ -114,6 +114,10 @@ function renderRegister() {
                                 <div class="col-md-6 mb-3"><label>Discipline</label><input type="text" class="form-control" name="discipline" required></div>
                             </div>
                             <div class="row">
+                                <div class="col-md-6 mb-3"><label>Hostel Name (if any)</label><input type="text" class="form-control" name="hostel_name"></div>
+                                <div class="col-md-6 mb-3"><label>Fee Slip ID</label><input type="text" class="form-control" name="fee_slip_id" required></div>
+                            </div>
+                            <div class="row">
                                 <div class="col-md-6 mb-3"><label>Semester</label><select class="form-select" name="semester"><option>8th</option></select></div>
                                 <div class="col-md-6 mb-3"><label>Profile Pic</label><input type="file" class="form-control" name="profile_pic" required></div>
                             </div>
@@ -211,8 +215,11 @@ async function renderStudentDashboard() {
                      <h5 class="fw-bold">${state.user.name}</h5>
                      <p class="text-muted">${student.reg_no}</p>
                      <div class="bg-light p-3 rounded text-start small">
+                        <div><strong>Father's Name:</strong> ${student.father_name || '-'}</div>
                         <div><strong>CNIC:</strong> ${student.cnic || '-'}</div>
                         <div><strong>Dept:</strong> ${student.discipline || '-'}</div>
+                        <div><strong>Hostel:</strong> ${student.hostel_name || 'Day Scholar'}</div>
+                        <div><strong>Fee Slip:</strong> ${student.fee_slip_id || '-'}</div>
                      </div>
                 </div>
             </div>
@@ -249,11 +256,22 @@ async function renderDepartmentDashboard() {
                     ${pending.length === 0 ? '<p class="text-muted p-4">No pending requests.</p>' : pending.map(req => `
                         <div class="col-md-6 mb-3">
                             <div class="card shadow-sm border-0 p-3">
-                                <div class="d-flex justify-content-between">
-                                    <h5 class="fw-bold">${req.student_name} (${req.reg_no})</h5>
-                                    <span class="badge bg-warning text-dark">Pending</span>
+                                <div class="d-flex align-items-start gap-3">
+                                    <img src="${req.profile_image_path ? '../' + req.profile_image_path : 'assets/img/default.png'}" class="rounded-circle" style="width:50px;height:50px;object-fit:cover;">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between">
+                                            <h5 class="fw-bold mb-0">${req.student_name} <small class="text-muted">(${req.reg_no})</small></h5>
+                                            <span class="badge bg-warning text-dark">Pending</span>
+                                        </div>
+                                        <div class="small text-muted mb-2">
+                                            <div><strong>Dept:</strong> ${req.discipline} | <strong>Sem:</strong> ${req.semester}</div>
+                                            <div><strong>Father:</strong> ${req.father_name} | <strong>CNIC:</strong> ${req.cnic || '-'}</div>
+                                            <div><strong>Hostel:</strong> ${req.hostel_name || 'Day Scholar'}</div>
+                                            <div><strong>Fee Slip:</strong> ${req.fee_slip_id || '-'}</div>
+                                            <div class="mt-1 text-primary fw-bold">Purpose: ${req.purpose.replace(/_/g, ' ').toUpperCase()}</div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <p class="small text-muted mb-2">${req.discipline} | ${req.purpose}</p>
                                 <div class="d-flex gap-2 mt-2">
                                     <button class="btn btn-success btn-sm flex-grow-1" onclick="updateRequest(${req.step_id}, 'approved', ${state.user.id})">Approve</button>
                                     <button class="btn btn-outline-danger btn-sm flex-grow-1" onclick="rejectRequest(${req.step_id}, ${state.user.id})">Reject</button>
@@ -379,7 +397,17 @@ function renderClearanceContent(res, student) {
                 <div class="modal-header"><h5 class="modal-title">New Request</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <form id="applyForm">
-                         <div class="mb-3"><label>Purpose</label><select id="purposeSelect" class="form-select"><option>Degree</option><option>Transcript</option></select></div>
+                         <div class="mb-3">
+                             <label>Purpose</label>
+                             <select id="purposeSelect" class="form-select">
+                                <option value="degree">Degree</option>
+                                <option value="provisional_certificate">Provisional Certificate</option>
+                                <option value="transcript">Transcript</option>
+                                <option value="admission_cancellation">Admission / Hostel Cancellation</option>
+                                <option value="synopsis_submission">Synopsis Submission</option>
+                                <option value="thesis_submission">Thesis Submission</option>
+                             </select>
+                         </div>
                          <button type="submit" class="btn btn-primary w-100">Submit</button>
                     </form>
                 </div>
@@ -391,18 +419,22 @@ function renderClearanceContent(res, student) {
     const allApproved = request.status === 'completed';
 
     return `
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h5 class="text-${allApproved ? 'success' : 'warning'} mb-0">Status: ${request.status.toUpperCase()}</h5>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h5 class="text-${allApproved ? 'success' : 'warning'} mb-0">Status: ${request.status.toUpperCase()}</h5>
+                <small class="text-muted">Applying for: <strong>${request.purpose.replace(/_/g, ' ').toUpperCase()}</strong></small>
+            </div>
             ${allApproved ? `<a href="http://localhost/EClearence/backend/api/certificate.php?id=${request.id}" target="_blank" class="btn btn-success"><i class="bi bi-download me-2"></i>Download Certificate</a>` : ''}
         </div>
-        <div class="list-group list-group-flush">
-            ${steps.map(s => `
+        <div class="list-group list-group-flush border rounded">
+            ${steps.map((s, index) => `
                 <div class="list-group-item d-flex justify-content-between align-items-center">
                     <div>
+                        <span class="badge bg-light text-dark me-2 border rounded-circle" style="width:25px;height:25px;line-height:18px;">${index + 1}</span>
                         <strong>${s.dept_name}</strong>
-                        ${s.remarks ? `<br><small class="text-danger">${s.remarks}</small>` : ''}
+                        ${s.remarks ? `<br><small class="text-danger ms-4"><i class="bi bi-info-circle me-1"></i>${s.remarks}</small>` : ''}
                     </div>
-                    <span class="badge bg-${s.status === 'approved' ? 'success' : (s.status === 'rejected' ? 'danger' : 'secondary')}">${s.status}</span>
+                    <span class="badge bg-${s.status === 'approved' ? 'success' : (s.status === 'rejected' ? 'danger' : 'secondary')} rounded-pill">${s.status.toUpperCase()}</span>
                 </div>
             `).join('')}
         </div>

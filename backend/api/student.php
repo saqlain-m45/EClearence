@@ -27,18 +27,32 @@ class StudentController {
         }
     }
 
+    private function getStudentId($userId) {
+        $stmt = $this->conn->prepare("SELECT id FROM students WHERE user_id = :uid");
+        $stmt->bindParam(':uid', $userId);
+        $stmt->execute();
+        return $stmt->fetchColumn();
+    }
+
     public function submitClearance() {
         $data = json_decode(file_get_contents("php://input"));
         
+        // Frontend sends user_id as student_id, so we treat it as user_id and lookup actual student_id
         if (!isset($data->student_id) || !isset($data->purpose)) {
             echo json_encode(['status' => 'error', 'message' => 'Missing fields']);
             return;
         }
 
+        $studentId = $this->getStudentId($data->student_id); // Look up actual Student ID
+        if (!$studentId) {
+             echo json_encode(['status' => 'error', 'message' => 'Student record not found']);
+             return;
+        }
+
         // Check if pending request exists
         $check = "SELECT id FROM clearance_requests WHERE student_id = :sid AND status IN ('pending', 'in_progress')";
         $stmt = $this->conn->prepare($check);
-        $stmt->bindParam(':sid', $data->student_id);
+        $stmt->bindParam(':sid', $studentId);
         $stmt->execute();
         
         if ($stmt->rowCount() > 0) {
@@ -52,7 +66,7 @@ class StudentController {
             // Create Request
             $sql = "INSERT INTO clearance_requests (student_id, purpose, status) VALUES (:sid, :purpose, 'pending')";
             $reqStmt = $this->conn->prepare($sql);
-            $reqStmt->bindParam(':sid', $data->student_id);
+            $reqStmt->bindParam(':sid', $studentId);
             $reqStmt->bindParam(':purpose', $data->purpose);
             $reqStmt->execute();
             $requestId = $this->conn->lastInsertId();
@@ -64,9 +78,17 @@ class StudentController {
             $stepSql = "INSERT INTO clearance_steps (request_id, department_id, status) VALUES (:rid, :did, 'pending')";
             $stepStmt = $this->conn->prepare($stepSql);
 
+            // Fetch student hostel status
+            $htStmt = $this->conn->prepare("SELECT hostel_name FROM students WHERE id = ?");
+            $htStmt->execute([$studentId]);
+            $isHosteler = !empty($htStmt->fetchColumn());
+
             foreach ($depts as $dept) {
-                // Skip Hostel for Day Scholars (logic to be refined later if 'is_boarder' is checked)
-                // For now, add all steps, logic to skip can be in approval or submission
+                // Skip Hostel for Day Scholars
+                if ($dept['slug'] == 'hostel' && !$isHosteler) {
+                    continue;
+                }
+                
                 $stepStmt->bindParam(':rid', $requestId);
                 $stepStmt->bindParam(':did', $dept['id']);
                 $stepStmt->execute();
@@ -77,7 +99,7 @@ class StudentController {
             $feeSql = "INSERT INTO fees (student_id, fee_type, amount, status) VALUES (:sid, :type, 5000.00, 'outstanding')";
             $feeStmt = $this->conn->prepare($feeSql);
             foreach ($fees as $fee) {
-                $feeStmt->bindParam(':sid', $data->student_id);
+                $feeStmt->bindParam(':sid', $studentId);
                 $feeStmt->bindParam(':type', $fee);
                 $feeStmt->execute();
             }
@@ -91,7 +113,13 @@ class StudentController {
         }
     }
 
-    public function getStatus($studentId) {
+    public function getStatus($userId) {
+        $studentId = $this->getStudentId($userId);
+        if (!$studentId) {
+            echo json_encode(['status' => 'error', 'message' => 'Student record not found']);
+            return;
+        }
+
         // Get Active Request
         $q = "SELECT * FROM clearance_requests WHERE student_id = :sid ORDER BY id DESC LIMIT 1";
         $stmt = $this->conn->prepare($q);
@@ -108,7 +136,8 @@ class StudentController {
         $sQ = "SELECT cs.*, d.name as dept_name, d.slug 
                FROM clearance_steps cs 
                JOIN departments d ON cs.department_id = d.id 
-               WHERE cs.request_id = :rid";
+               WHERE cs.request_id = :rid
+               ORDER BY cs.id ASC";
         $sStmt = $this->conn->prepare($sQ);
         $sStmt->bindParam(':rid', $request['id']);
         $sStmt->execute();
@@ -138,8 +167,7 @@ if (isset($_GET['action'])) {
             $student->submitClearance();
             break;
         case 'status':
-             // Get student ID from user ID (need a lookup)
-             // For simplicity, let's assume 'id' param is student_id for now or fetch it
+             // ID here is USER_ID from frontend
             if ($id) $student->getStatus($id);
             break;
         default:

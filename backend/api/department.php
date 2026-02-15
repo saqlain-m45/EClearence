@@ -13,7 +13,8 @@ class DepartmentController {
         // Fetch clearance steps assigned to this dept (Include s.id as student_id)
         $query = "SELECT cs.id as step_id, cs.status as step_status, 
                          cr.id as request_id, cr.purpose, cr.request_date,
-                         s.id as student_id, s.reg_no, s.discipline, s.semester, u.name as student_name
+                         s.id as student_id, s.reg_no, s.discipline, s.semester, s.father_name, s.hostel_name, s.fee_slip_id, s.profile_image_path,
+                         u.name as student_name
                   FROM clearance_steps cs
                   JOIN clearance_requests cr ON cs.request_id = cr.id
                   JOIN students s ON cr.student_id = s.id

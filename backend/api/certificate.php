@@ -10,7 +10,7 @@ if (!$requestId) {
 
 // 2. Fetch Data
 $query = "SELECT cr.id, cr.status, cr.completed_date, cr.verification_code,
-                 u.name, s.reg_no, s.discipline, s.cnic, s.father_name, s.dob
+                 u.name, s.reg_no, s.discipline, s.cnic, s.father_name, s.dob, s.hostel_name, s.fee_slip_id
           FROM clearance_requests cr
           JOIN students s ON cr.student_id = s.id
           JOIN users u ON s.user_id = u.id
@@ -103,7 +103,9 @@ printRow($image, $boxY + 70,  "Father's Name",       $data['father_name'], $blac
 printRow($image, $boxY + 120, "Registration No",     $data['reg_no'], $black, $darkBlue);
 printRow($image, $boxY + 170, "CNIC Number",         $data['cnic'] ?? 'N/A', $black, $darkBlue);
 printRow($image, $boxY + 220, "Department",          $data['discipline'], $black, $darkBlue);
-printRow($image, $boxY + 270, "Date of Clearance",   date("d F, Y", strtotime($data['completed_date'])), $black, $darkBlue);
+printRow($image, $boxY + 270, "Hostel Name",         $data['hostel_name'] ?? 'Day Scholar', $black, $darkBlue);
+printRow($image, $boxY + 320, "Fee Slip ID",         $data['fee_slip_id'] ?? 'N/A', $black, $darkBlue);
+printRow($image, $boxY + 370, "Date of Clearance",   date("d F, Y", strtotime($data['completed_date'])), $black, $darkBlue);
 
 // 8. Footer & Verification
 $footerY = 700;
