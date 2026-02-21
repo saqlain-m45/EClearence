@@ -27,16 +27,27 @@ async function apiCall(endpoint, method = 'GET', body = null) {
         method,
         headers: {
             'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'same-origin' // Ensure cookies are sent
     };
     if (body) options.body = JSON.stringify(body);
 
     try {
         const res = await fetch(`${API_URL}/${endpoint}`, options);
+        if (!res.ok) {
+            console.warn(`API responded with status ${res.status} for ${endpoint}`);
+            // Still try to parse JSON error message if possible
+            try {
+                const errData = await res.json();
+                return errData;
+            } catch (e) {
+                return { status: 'error', message: `Server error: ${res.status}` };
+            }
+        }
         return await res.json();
     } catch (err) {
         console.error('API Error:', err);
-        return null;
+        return { status: 'error', message: 'Connection failed' };
     }
 }
 
@@ -184,12 +195,18 @@ function renderStatCard(title, value, icon, colorClass) {
 async function renderStudentDashboard() {
     document.getElementById('page-title').textContent = 'My Dashboard';
 
-    const profileRes = await apiCall(`student.php?action=profile&id=${state.user.id}`);
-    const student = profileRes.status === 'success' ? profileRes.data : {};
-    const statusRes = await apiCall(`student.php?action=status&id=${state.user.id}`);
+    const [profileRes, statusRes] = await Promise.all([
+        apiCall(`student.php?action=profile&id=${state.user.id}`),
+        apiCall(`student.php?action=status&id=${state.user.id}`)
+    ]);
 
-    const totalSteps = statusRes.data ? statusRes.data.steps.length : 0;
-    const completed = statusRes.data ? statusRes.data.steps.filter(s => s.status === 'approved').length : 0;
+    if (profileRes.status !== 'success') {
+        showToast(profileRes.message || 'Failed to load profile', 'error');
+    }
+
+    const student = profileRes.data || {};
+    const totalSteps = (statusRes.data && statusRes.data.steps) ? statusRes.data.steps.length : 0;
+    const completed = (statusRes.data && statusRes.data.steps) ? statusRes.data.steps.filter(s => s.status === 'approved').length : 0;
     const imgUrl = student.profile_image_path ? `http://localhost/EClearence/frontend/${student.profile_image_path}` : 'assets/img/default.png';
 
     app.innerHTML = `
@@ -230,13 +247,20 @@ async function renderStudentDashboard() {
 
 // --- Department Dashboard ---
 async function renderDepartmentDashboard() {
+    if (!state.user.department || !state.user.department.id) {
+        showToast('Department details missing', 'error');
+        return;
+    }
+
     document.getElementById('page-title').textContent = `${state.user.department.name} Dashboard`;
 
-    const pendingRes = await apiCall(`department.php?action=pending&id=${state.user.department.id}`);
-    const pending = pendingRes.data || [];
+    const [pendingRes, historyRes] = await Promise.all([
+        apiCall(`department.php?action=pending&id=${state.user.department.id}`),
+        apiCall(`department.php?action=history&id=${state.user.department.id}`)
+    ]);
 
-    const historyRes = await apiCall(`department.php?action=history&id=${state.user.department.id}`);
-    const history = historyRes.data || [];
+    const pending = pendingRes.status === 'success' ? (pendingRes.data || []) : [];
+    const history = historyRes.status === 'success' ? (historyRes.data || []) : [];
 
     app.innerHTML = `
         <div class="row mb-4">

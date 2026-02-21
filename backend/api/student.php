@@ -161,17 +161,27 @@ if (isset($_GET['action'])) {
 
     switch ($_GET['action']) {
         case 'profile':
-            if ($id) $student->getProfile($id); // Pass USER_ID here
+            if ($id) {
+                $student->getProfile($id);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Student ID missing']);
+            }
             break;
         case 'submit':
             $student->submitClearance();
             break;
         case 'status':
-             // ID here is USER_ID from frontend
-            if ($id) $student->getStatus($id);
+            if ($id) {
+                $student->getStatus($id);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Student ID missing']);
+            }
             break;
         default:
              echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
     }
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'No action specified']);
 }
 ?>
+

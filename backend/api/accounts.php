@@ -48,7 +48,11 @@ if (isset($_GET['action'])) {
 
     switch ($_GET['action']) {
         case 'fees':
-            if ($id) $accounts->getStudentFees($id);
+            if ($id) {
+                $accounts->getStudentFees($id);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Student ID missing']);
+            }
             break;
         case 'update':
             $accounts->updateFeeStatus();
@@ -56,5 +60,8 @@ if (isset($_GET['action'])) {
         default:
              echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
     }
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'No action specified']);
 }
 ?>
+

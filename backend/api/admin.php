@@ -53,5 +53,8 @@ if (isset($_GET['action'])) {
         default:
              echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
     }
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'No action specified']);
 }
 ?>
+

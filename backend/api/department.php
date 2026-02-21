@@ -103,10 +103,13 @@ if (isset($_GET['action'])) {
 
     switch ($_GET['action']) {
         case 'pending':
-            if ($id) $dept->getPendingRequests($id);
+            if ($id) {
+                $dept->getPendingRequests($id);
+            } else {
+                echo json_encode(['status' => 'error', 'message' => 'Department ID missing']);
+            }
             break;
         case 'history':
-            // Fetch All Requests (Approved/Rejected) for Dept
             if ($id) {
                 $query = "SELECT cs.id as step_id, cs.status, cs.updated_at, cs.remarks,
                          u.name as student_name, s.reg_no
@@ -120,19 +123,17 @@ if (isset($_GET['action'])) {
                 $stmt->execute([$id]);
                 echo json_encode(['status' => 'success', 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             } else {
-                 echo json_encode(['status' => 'error', 'message' => 'Missing ID']);
+                 echo json_encode(['status' => 'error', 'message' => 'Department ID missing']);
             }
             break;
         case 'update':
-            // Custom update to handle code generation
-            $data = json_decode(file_get_contents("php://input"));
-            // ... (We need to modify the updateRequestStatus logic, but since it's inside the class, 
-            // we should probably replace the CLASS method instead.
-            // However, to keep it simple with this tool, I'll update the switch to call a modified method or just update the file content for the method itself.)
             $dept->updateRequestStatus();
             break;
         default:
              echo json_encode(['status' => 'error', 'message' => 'Invalid action']);
     }
+} else {
+    echo json_encode(['status' => 'error', 'message' => 'No action specified']);
 }
 ?>
+
