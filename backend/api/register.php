@@ -25,9 +25,31 @@ if (empty($name) || empty($email) || empty($password) || empty($reg_no)) {
     exit();
 }
 
-// ... file upload code remains ... 
+// 1. Handle File Upload (Optional)
+$profile_image_path = null;
+if (isset($_FILES['profile_image']) && $_FILES['profile_image']['error'] === UPLOAD_ERR_OK) {
+    $upload_dir = '../uploads/profiles/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0777, true);
+    }
+    
+    $file_ext = pathinfo($_FILES['profile_image']['name'], PATHINFO_EXTENSION);
+    $file_name = uniqid('profile_') . '.' . $file_ext;
+    $target_path = $upload_dir . $file_name;
+    
+    if (move_uploaded_file($_FILES['profile_image']['tmp_name'], $target_path)) {
+        $profile_image_path = 'backend/uploads/profiles/' . $file_name;
+    }
+}
 
-// ... user creation code remains ...
+try {
+    $conn->beginTransaction();
+
+    // 1. Create User
+    $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+    $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, profile_image) VALUES (?, ?, ?, 'student', ?)");
+    $stmt->execute([$name, $email, $hashed_password, $profile_image_path]);
+    $user_id = $conn->lastInsertId();
 
     // 2. Create Student Details
     $stmt = $conn->prepare("INSERT INTO students (user_id, reg_no, discipline, semester, father_name, cnic, dob, hostel_name, fee_slip_id, profile_image_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -37,7 +59,9 @@ if (empty($name) || empty($email) || empty($password) || empty($reg_no)) {
     echo json_encode(['status' => 'success', 'message' => 'Registration successful']);
 
 } catch (Exception $e) {
-    $conn->rollBack();
+    if ($conn->inTransaction()) {
+        $conn->rollBack();
+    }
     if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
          echo json_encode(['status' => 'error', 'message' => 'Email or Registration Number already exists']);
     } else {
@@ -45,3 +69,4 @@ if (empty($name) || empty($email) || empty($password) || empty($reg_no)) {
     }
 }
 ?>
+
