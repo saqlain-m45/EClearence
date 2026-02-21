@@ -1,0 +1,29 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Backend
+backend/uploads/profiles/*
+!backend/uploads/profiles/.gitkeep
+
+# Frontend Build/Clutter
+node_modules/
+dist/
+.vite/
+frontend/.vite/
+frontend/node_modules/
+frontend/package.json
+frontend/package-lock.json
+frontend/vite.config.js
+frontend/tailwind.config.js
+frontend/postcss.config.js
+frontend/eslint.config.js
+frontend/src/
+frontend/public/
+
+# Logs
+*.log
